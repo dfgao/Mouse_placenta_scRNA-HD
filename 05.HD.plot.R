@@ -4945,3 +4945,307 @@ plot_cellchat_heatmap_fixed_0_15(Young.hd.cc, title.name = 'Young',sources.use =
 
 netVisual_heatmap(age_young.hd.cc, title.name = 'Age vs Young number',sources.use = 'Macrophages.like')
 
+age.dsc <- subset(Age3.jz_db.hd.age.seu.5ct, guess.ct == 'DSCs')
+age.dsc <- DietSeurat(age.dsc,assays = 'Spatial.008um')
+age.dsc$sample <- 'Age'
+young.dsc <- subset(Young1.jz_db.hd.young.seu.5ct, guess.ct == 'DSCs')
+young.dsc <- DietSeurat(young.dsc,assays = 'Spatial.008um')
+young.dsc$sample <- 'Young'
+ko.dsc <- subset(KO2.jz_db.hd.all.seu.5ct, guess.ct == 'DSCs')
+ko.dsc <- DietSeurat(ko.dsc,assays = 'Spatial.008um')
+ko.dsc$sample <- 'KO'
+
+dsc.8um <- merge(x = age.dsc, y = c(young.dsc,ko.dsc))
+dsc.8um[["Spatial.008um"]] <- JoinLayers(dsc.8um[["Spatial.008um"]])
+SpatialDimPlot(dsc.8um,crop = F,image.alpha = 0.2)
+table(dsc.8um$sample)
+dsc.8um$near_samp <- paste0(dsc.8um$sample,'_',dsc.8um$cell_type_dis_sq_5bin)
+table(dsc.8um$near_samp)
+
+# young ----
+library(AUCell)
+expr_mat <- GetAssayData(young.dsc, assay="Spatial.008um", layer="data")
+rownames(expr_mat)[1:5]
+colnames(expr_mat)[1:5]
+is.null(rownames(expr_mat))
+is.null(colnames(expr_mat))
+
+young.dsc.cells_rankings <- AUCell_buildRankings(expr_mat,nCores = 30)
+
+geneset <- list('SASP' = c(sasp.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            young.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.1 * nrow(young.dsc.cells_rankings)))
+young.dsc$SASP_AUC <- as.numeric(getAUC(cells_AUC)['SASP',])
+table(young.dsc$cell_type_dis_sq_5bin)
+
+sasp.auc <- young.dsc@meta.data[,c('SASP_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(sasp.auc$cell_type_dis_sq_5bin)
+median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$SASP_AUC)/median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'DSCs',]$SASP_AUC)
+
+ggplot(sasp.auc, aes(x = SASP_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("SASP") + xlab('AUC') + ylab("") + 
+  xlim(0.03,0.12) + 
+  theme_test(base_size = 15) +
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+# + 
+#   ggpubr::stat_compare_means(comparisons = list(c('DSCs','Near_mac_DSCs')),paired = F,
+#                              method = "wilcox.test")
+
+geneset <- list('infm' = c(infm.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            young.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.05 * nrow(young.dsc.cells_rankings)))
+young.dsc$infm_AUC <- as.numeric(getAUC(cells_AUC)['infm',])
+
+infm.auc <- young.dsc@meta.data[,c('infm_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(infm.auc$cell_type_dis_sq_5bin)
+median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$infm_AUC)/median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'DSCs',]$infm_AUC)
+
+ggplot(infm.auc, aes(x = infm_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("infm") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  xlim(0.02,0.08)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+
+# age -----
+library(AUCell)
+expr_mat <- GetAssayData(age.dsc, assay="Spatial.008um", layer="data")
+rownames(expr_mat)[1:5]
+colnames(expr_mat)[1:5]
+is.null(rownames(expr_mat))
+is.null(colnames(expr_mat))
+
+age.dsc.cells_rankings <- AUCell_buildRankings(expr_mat,nCores = 30)
+
+geneset <- list('SASP' = c(sasp.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            age.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.1 * nrow(age.dsc.cells_rankings)))
+age.dsc$SASP_AUC <- as.numeric(getAUC(cells_AUC)['SASP',])
+table(age.dsc$cell_type_dis_sq_5bin)
+
+sasp.auc <- age.dsc@meta.data[,c('SASP_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(sasp.auc$cell_type_dis_sq_5bin)
+median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$SASP_AUC)/median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'DSCs',]$SASP_AUC)
+
+ggplot(sasp.auc, aes(x = SASP_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("SASP") + xlab('AUC') + ylab("") + 
+  xlim(0.03,0.14) +
+  theme_test(base_size = 15) +
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+# + 
+#   ggpubr::stat_compare_means(comparisons = list(c('DSCs','Near_mac_DSCs')),paired = F,
+#                              method = "wilcox.test")
+
+geneset <- list('infm' = c(infm.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            age.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.05 * nrow(age.dsc.cells_rankings)))
+age.dsc$infm_AUC <- as.numeric(getAUC(cells_AUC)['infm',])
+
+infm.auc <- age.dsc@meta.data[,c('infm_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(infm.auc$cell_type_dis_sq_5bin)
+median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$infm_AUC)/median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'DSCs',]$infm_AUC)
+
+ggplot(infm.auc, aes(x = infm_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("infm") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  xlim(0.025,0.08)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+
+# ko -----
+library(AUCell)
+expr_mat <- GetAssayData(ko.dsc, assay="Spatial.008um", layer="data")
+rownames(expr_mat)[1:5]
+colnames(expr_mat)[1:5]
+is.null(rownames(expr_mat))
+is.null(colnames(expr_mat))
+
+ko.dsc.cells_rankings <- AUCell_buildRankings(expr_mat,nCores = 30)
+
+geneset <- list('SASP' = c(sasp.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            ko.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.1 * nrow(ko.dsc.cells_rankings)))
+ko.dsc$SASP_AUC <- as.numeric(getAUC(cells_AUC)['SASP',])
+table(ko.dsc$cell_type_dis_sq_5bin)
+
+sasp.auc <- ko.dsc@meta.data[,c('SASP_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(sasp.auc$cell_type_dis_sq_5bin)
+median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$SASP_AUC)/median(sasp.auc[sasp.auc$cell_type_dis_sq_5bin == 'DSCs',]$SASP_AUC)
+
+ggplot(sasp.auc, aes(x = SASP_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("SASP") + xlab('AUC') + ylab("") + 
+  # xlim(0.03,0.14) +
+  theme_test(base_size = 15) +
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+# + 
+#   ggpubr::stat_compare_means(comparisons = list(c('DSCs','Near_mac_DSCs')),paired = F,
+#                              method = "wilcox.test")
+
+geneset <- list('infm' = c(infm.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            ko.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.05 * nrow(ko.dsc.cells_rankings)))
+ko.dsc$infm_AUC <- as.numeric(getAUC(cells_AUC)['infm',])
+
+infm.auc <- ko.dsc@meta.data[,c('infm_AUC','cell_type_dis_sq_5bin')] %>% na.omit()
+table(infm.auc$cell_type_dis_sq_5bin)
+median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'Near_mac_DSCs',]$infm_AUC)/median(infm.auc[infm.auc$cell_type_dis_sq_5bin == 'DSCs',]$infm_AUC)
+
+ggplot(infm.auc, aes(x = infm_AUC, y = cell_type_dis_sq_5bin, fill = cell_type_dis_sq_5bin)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#6EE2FFFF','#D0DFE6FF','#F7C530FF')) +
+  ggtitle("infm") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  xlim(0.02,0.08)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+
+# all dsc -----
+
+## not integrate
+expr_mat <- GetAssayData(dsc.8um, assay="Spatial.008um", layer="data")
+rownames(expr_mat)[1:5]
+colnames(expr_mat)[1:5]
+is.null(rownames(expr_mat))
+is.null(colnames(expr_mat))
+
+sp.dsc.cells_rankings <- AUCell_buildRankings(expr_mat,nCores = 30)
+
+## sasp
+geneset <- list('SASP' = c(sasp.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            sp.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.1 * nrow(sp.dsc.cells_rankings)))
+dsc.8um$SASP_AUC <- as.numeric(getAUC(cells_AUC)['SASP',])
+
+sasp.auc <- dsc.8um@meta.data[,c('SASP_AUC','near_samp')] %>% na.omit()
+table(sasp.auc$near_samp)
+sasp.auc_near <- sasp.auc[sasp.auc$near_samp %in% c('Age_Near_mac_DSCs','KO_Near_mac_DSCs','Young_Near_mac_DSCs'),]
+table(sasp.auc_near$near_samp)
+sasp.auc_near$near_samp <- factor(sasp.auc_near$near_samp, levels = c('KO_Near_mac_DSCs','Age_Near_mac_DSCs','Young_Near_mac_DSCs'))
+
+ggplot(sasp.auc_near, aes(x = SASP_AUC, y = near_samp, fill = near_samp)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = (c('#f69b80','red3','#9b93c7'))) +
+  ggtitle("SASP") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  xlim(0.02,0.14)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+
+## infm
+geneset <- list('infm' = c(infm.geneuse[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            sp.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.05 * nrow(sp.dsc.cells_rankings)))
+dsc.8um$infm_AUC <- as.numeric(getAUC(cells_AUC)['infm',])
+
+infm.auc <- dsc.8um@meta.data[,c('infm_AUC','near_samp')] %>% na.omit()
+table(infm.auc$near_samp)
+infm.auc_near <- infm.auc[infm.auc$near_samp %in% c('Age_Near_mac_DSCs','KO_Near_mac_DSCs','Young_Near_mac_DSCs'),]
+table(infm.auc_near$near_samp)
+infm.auc_near$near_samp <- factor(infm.auc_near$near_samp, levels = c('KO_Near_mac_DSCs','Age_Near_mac_DSCs','Young_Near_mac_DSCs'))
+
+ggplot(infm.auc_near, aes(x = infm_AUC, y = near_samp, fill = near_samp)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#f69b80','red3','#9b93c7')) +
+  ggtitle("infm") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  xlim(0.02,0.08)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
+
+## nad
+geneset <- list('nad' = c(NAD.dehy.comp.gene[[1]]))
+cells_AUC <- AUCell_calcAUC(geneset,                     
+                            sp.dsc.cells_rankings,                 
+                            nCores = 30,               
+                            aucMaxRank = ceiling(0.05 * nrow(sp.dsc.cells_rankings)))
+
+dsc.8um$nad_AUC <- as.numeric(getAUC(cells_AUC)['nad',])
+
+nad.auc <- dsc.8um@meta.data[,c('nad_AUC','near_samp')] %>% na.omit()
+table(nad.auc$near_samp)
+nad.auc_near <- nad.auc[nad.auc$near_samp %in% c('Age_Near_mac_DSCs','KO_Near_mac_DSCs','Young_Near_mac_DSCs'),]
+table(nad.auc_near$near_samp)
+nad.auc_near$near_samp <- factor(nad.auc_near$near_samp, levels = c('KO_Near_mac_DSCs','Age_Near_mac_DSCs','Young_Near_mac_DSCs'))
+
+ggplot(nad.auc_near, aes(x = nad_AUC, y = near_samp, fill = near_samp)) +
+  geom_density_ridges(quantile_lines = TRUE, quantiles = 2,alpha = 0.8) +
+  scale_fill_manual(values = c('#f69b80','red3','#9b93c7')) +
+  ggtitle("nad") + xlab('AUC') + ylab("") + 
+  theme_test(base_size = 15) +
+  # xlim(0.02,0.08)+
+  theme(panel.border=element_rect(linewidth = 1, color = "black"),
+        strip.background = element_rect(linewidth = 1, fill = "white"),
+        strip.text = element_text(size = 18),
+        axis.title.x = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black"),
+        axis.line = element_line(size = 0.6), 
+        legend.position ="none") 
